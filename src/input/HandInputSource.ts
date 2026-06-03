@@ -4,6 +4,7 @@ import {
   type HandLandmarkerResult,
 } from "@mediapipe/tasks-vision";
 import { DISPLAY, HAND } from "../config/tuning";
+import { settings } from "../config/settings";
 import type { InputSource, InputState } from "./InputSource";
 import { AimCalibration, type Vec2 } from "./calibration";
 import { OneEuro2D } from "./oneEuro";
@@ -69,7 +70,7 @@ export class HandInputSource implements InputSource {
 
   private readonly calib = new AimCalibration();
   private readonly filter = new OneEuro2D(
-    () => HAND.ONE_EURO_MIN_CUTOFF,
+    () => settings.minCutoff(),
     () => HAND.ONE_EURO_BETA,
     HAND.ONE_EURO_DCUTOFF,
   );
@@ -223,7 +224,7 @@ export class HandInputSource implements InputSource {
     const mapped = this.calib.map({ x: idxTip.x, y: idxTip.y });
     const live = this.filter.filter(mapped.x, mapped.y, now);
 
-    if (HAND.FIRE_GESTURE === "pinch") {
+    if (settings.fireGesture() === "pinch") {
       const normDist = PinchDetector.normalizedDistance(
         lm[THUMB_TIP],
         idxTip,

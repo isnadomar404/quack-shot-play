@@ -1,4 +1,5 @@
 import { HAND } from "../config/tuning";
+import { settings } from "../config/settings";
 import type { Vec2 } from "./calibration";
 
 /**
@@ -33,13 +34,13 @@ export class PinchDetector {
     this.framesSinceFire++;
 
     // Re-arm once the fingers are clearly apart.
-    if (normDist > HAND.PINCH_UP_THRESHOLD) {
+    if (normDist > settings.pinchUp()) {
       this.armed = true;
     }
 
     if (
       this.armed &&
-      normDist < HAND.PINCH_DOWN_THRESHOLD &&
+      normDist < settings.pinchDown() &&
       this.framesSinceFire >= HAND.PINCH_MIN_FRAMES_BETWEEN
     ) {
       this.armed = false; // one shot per pinch; must re-open to re-arm
@@ -51,7 +52,7 @@ export class PinchDetector {
 
   /** True while the fingers are open enough to be considered un-pinched. */
   isOpen(normDist: number): boolean {
-    return normDist > HAND.PINCH_UP_THRESHOLD;
+    return normDist > settings.pinchUp();
   }
 
   reset(): void {

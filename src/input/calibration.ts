@@ -1,4 +1,5 @@
 import { DISPLAY, HAND } from "../config/tuning";
+import { settings } from "../config/settings";
 
 /**
  * Aim calibration — maps the index fingertip in normalized hand-space (0..1, as
@@ -101,8 +102,9 @@ export class AimCalibration {
       this.center = { x: tip.x, y: tip.y };
       this.pendingRecenter = false;
     }
-    const relX = (tip.x - this.center.x) * HAND.AIM_SENSITIVITY;
-    const relY = (tip.y - this.center.y) * HAND.AIM_SENSITIVITY;
+    const sensitivity = settings.aimSensitivity();
+    const relX = (tip.x - this.center.x) * sensitivity;
+    const relY = (tip.y - this.center.y) * sensitivity;
     // Mirror X (camera preview is mirrored); Y is not mirrored.
     const x = (0.5 - relX) * DISPLAY.WIDTH;
     const y = (0.5 + relY) * DISPLAY.HEIGHT;

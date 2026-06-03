@@ -25,6 +25,7 @@ import { loadHiScore, saveHiScore } from "../game/highscore";
 import type { LevelConfig, SpawnEntry } from "../levels/LevelConfig";
 import { Crosshair } from "../ui/crosshair";
 import { TrackingIndicator } from "../ui/trackingIndicator";
+import { SettingsMenu } from "../ui/settingsMenu";
 import { sfx } from "../audio/sfx";
 
 /** HUD payload broadcast to the UI scene. */
@@ -45,6 +46,7 @@ const TITLE = "QUACK SHOT";
 
 type Mode =
   | "title"
+  | "settings"
   | "calibrate"
   | "intro"
   | "playing"
@@ -84,6 +86,9 @@ export class GameScene extends Phaser.Scene {
   private mode: Mode = "title";
   private crosshair!: Crosshair;
   private tracking!: TrackingIndicator;
+  private settingsMenu!: SettingsMenu;
+  /** Clickable SETTINGS button region on the title screen (cursor/pinch). */
+  private titleSettingsBtn: { x: number; y: number; w: number; h: number } | undefined;
   /** SPACEBAR-fire source, OR'd into the active source every frame (permanent). */
   private keyboard!: KeyboardInputSource;
   private banner: Phaser.GameObjects.Text[] = [];
@@ -134,6 +139,13 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-C", () => {
       if (this.hand) this.startCalibration();
     });
+    // [S] opens the settings menu from the title; [Esc] closes it.
+    this.input.keyboard?.on("keydown-S", () => {
+      if (this.mode === "title") this.openSettings();
+    });
+    this.input.keyboard?.on("keydown-ESC", () => {
+      if (this.mode === "settings") this.closeSettings();
+    });
 
     // Tracking-quality dot (top-right); hidden until hand tracking is up.
     this.tracking = new TrackingIndicator(this);
@@ -151,6 +163,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(60);
 
     this.crosshair = new Crosshair(this);
+    this.settingsMenu = new SettingsMenu(this);
     this.dog = new Dog(this);
 
     // Start on the title screen; first fire (finger-gun or click) begins play.
@@ -164,6 +177,7 @@ export class GameScene extends Phaser.Scene {
       this.clearTitle();
       this.clearCalib();
       this.clearScene();
+      this.settingsMenu.close();
       if (this.audioUnlock) {
         window.removeEventListener("pointerdown", this.audioUnlock);
         window.removeEventListener("keydown", this.audioUnlock);
@@ -271,12 +285,19 @@ export class GameScene extends Phaser.Scene {
       isFiring: primary.isFiring || kb.isFiring,
     };
 
-    if (this.mode === "calibrate") {
+    if (this.mode === "settings") {
+      if (input.isFiring) this.settingsMenu.fire(input.x, input.y);
+    } else if (this.mode === "calibrate") {
       this.updateCalibration(input);
     } else if (this.mode === "title" && input.isFiring) {
-      sfx.unlock();
-      this.clearTitle();
-      this.startRound();
+      // Firing over the SETTINGS button opens settings; anywhere else starts.
+      if (this.titleSettingsBtn && this.inRegion(input, this.titleSettingsBtn)) {
+        this.openSettings();
+      } else {
+        sfx.unlock();
+        this.clearTitle();
+        this.startRound();
+      }
     } else if (this.mode === "playing") {
       if (input.isFiring && this.target.isFlying() && this.shotsLeft > 0) {
         this.shotsLeft--;
@@ -514,6 +535,34 @@ export class GameScene extends Phaser.Scene {
       "GAME OVER",
       `missed ${bagged}/${threshold} · ${hiTag} · fire to retry`,
     );
+  }
+
+  /** Open the settings overlay from the title. */
+  private openSettings(): void {
+    sfx.unlock();
+    this.clearTitle();
+    this.mode = "settings";
+    this.settingsMenu.open({
+      hasHand: !!this.hand,
+      onRecalibrate: () => {
+        this.settingsMenu.close();
+        this.startCalibration();
+      },
+      onClose: () => this.closeSettings(),
+    });
+  }
+
+  private closeSettings(): void {
+    this.settingsMenu.close();
+    this.mode = "title";
+    this.showTitle();
+  }
+
+  private inRegion(
+    p: { x: number; y: number },
+    r: { x: number; y: number; w: number; h: number },
+  ): boolean {
+    return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
   }
 
   /** Title subtitle: include the stored hi-score once one exists. */
@@ -819,6 +868,24 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
+    // SETTINGS button — clickable / pinchable (also opens via the [S] key).
+    const settingsBtn = this.add
+      .text(cx, 174, "[ SETTINGS ]", {
+        fontFamily: TYPO.BODY,
+        fontSize: "9px",
+        color: "#73eff7",
+      })
+      .setOrigin(0.5)
+      .setDepth(90);
+    this.titleObjects.push(settingsBtn);
+    const b = settingsBtn.getBounds();
+    this.titleSettingsBtn = {
+      x: b.x - 6,
+      y: b.y - 4,
+      w: b.width + 12,
+      h: b.height + 8,
+    };
+
     const footer = this.add
       .text(cx, DISPLAY.HEIGHT - 16, "ORIGINAL ARCADE REMAKE", {
         fontFamily: TYPO.HEADING,
@@ -867,6 +934,7 @@ export class GameScene extends Phaser.Scene {
       o.destroy();
     });
     this.titleObjects = [];
+    this.titleSettingsBtn = undefined;
   }
 
   private showBanner(title: string, sub: string): void {

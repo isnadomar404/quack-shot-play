@@ -299,3 +299,26 @@ export const LEVEL = {
   STAR_COUNT: 44,
   STAR_COLOR: 0xf4f4f4, // PALETTE[12]
 } as const;
+
+/** Player-tweakable settings (the in-game Settings menu). The runtime store
+ *  (`src/config/settings.ts`) holds the live values, persisted to localStorage,
+ *  and the gesture pipeline reads from it. These are the ranges + mappings; the
+ *  HAND.* values above are the factory defaults the store seeds from. */
+export const SETTINGS = {
+  STORAGE_KEY: "fowlplay:settings",
+  /** Aim sensitivity slider (raw multiplier). */
+  AIM_MIN: 0.8,
+  AIM_MAX: 4.0,
+  AIM_STEP: 0.2,
+  /** Smoothing slider 0..1 maps to the One Euro min cutoff: 0 = snappy (high
+   *  cutoff), 1 = smooth (low cutoff). */
+  SMOOTH_CUTOFF_SNAPPY: 4.0,
+  SMOOTH_CUTOFF_SMOOTH: 0.6,
+  /** Pinch-ease slider 0..1 maps to the pinch-down threshold: 0 = hard (fingers
+   *  must nearly touch), 1 = easy. Up-threshold = down + GAP (hysteresis). */
+  PINCH_DOWN_HARD: 0.2,
+  PINCH_DOWN_EASY: 0.45,
+  PINCH_GAP: 0.1,
+  /** Step for the 0..1 sliders (smoothing, pinch ease). */
+  NORM_STEP: 0.1,
+} as const;
