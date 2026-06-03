@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Duck Hunt Remake</title>
+    <!-- Retro pixel heading font. display=swap so text never blocks paint;
+         Boot waits briefly for it (with a timeout fallback) before the title. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #1a1c2c; /* PALETTE[0] — darkest, avoids white flash before canvas paints */
+        overflow: hidden;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* vw/vh fallback, then dynamic viewport units so mobile browser chrome
+           (URL bar show/hide) doesn't clip or letterbox the canvas. */
+        width: 100vw;
+        height: 100vh;
+        width: 100dvw;
+        height: 100dvh;
+        /* Don't let scroll/double-tap gestures fight aiming; pinch-zoom stays. */
+        touch-action: manipulation;
+      }
+      /* Crisp pixels when the canvas is scaled up. */
+      #app canvas {
+        display: block;
+        image-rendering: pixelated;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

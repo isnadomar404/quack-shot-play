@@ -1,0 +1,32 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "dc0b704c-8d01-49e1-b794-b5f9249a4f84",
+        "name": "Duck (anchor)",
+        "prompt": "plump stylized mallard duck in flight, wings spread mid-flap, side profile, neo-retro pixel art, flat colors with dithered shading, hard pixel edges, no anti-aliasing, clean bold silhouette, transparent background, strict 16-color SWEETIE-16 palette only (#1a1c2c #5d275d #b13e53 #ef7d57 #ffcd75 #a7f070 #38b764 #257179 #29366f #3b5dc9 #41a6f6 #73eff7 #f4f4f4 #94b0c2 #566c86 #333c57)",
+        "size": {
+          "width": 68,
+          "height": 68
+        },
+        "template_id": "mannequin",
+        "directions": 4,
+        "view": "side",
+        "created_at": "2026-05-27T16:10:23.089381+00:00"
+      },
+      "folder": "Duck_anchor",
+      "frames": {
+        "rotations": {
+          "south": "Duck_anchor/rotations/south.png",
+          "west": "Duck_anchor/rotations/west.png",
+          "east": "Duck_anchor/rotations/east.png",
+          "north": "Duck_anchor/rotations/north.png"
+        },
+        "animations": {}
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-05-28T20:12:25.657503"
+}

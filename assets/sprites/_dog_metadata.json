@@ -1,0 +1,76 @@
+{
+  "group_id": null,
+  "states": [
+    {
+      "character": {
+        "id": "4437f6dc-5df6-4500-a67d-9550781636d4",
+        "name": "Dog (hunting hound)",
+        "prompt": "goofy big-eared hunting hound with an expressive face, smiling, low-set ears, neo-retro pixel art, flat colors with dithered shading, hard pixel edges, no anti-aliasing, clean bold silhouette, transparent background, strict 16-color SWEETIE-16 palette only (#1a1c2c #5d275d #b13e53 #ef7d57 #ffcd75 #a7f070 #38b764 #257179 #29366f #3b5dc9 #41a6f6 #73eff7 #f4f4f4 #94b0c2 #566c86 #333c57)",
+        "size": {
+          "width": 68,
+          "height": 68
+        },
+        "template_id": "dog",
+        "directions": 8,
+        "view": "side",
+        "created_at": "2026-05-27T16:20:06.526268+00:00"
+      },
+      "folder": "Dog_hunting_hound",
+      "frames": {
+        "rotations": {
+          "south": "Dog_hunting_hound/rotations/south.png",
+          "south-east": "Dog_hunting_hound/rotations/south-east.png",
+          "east": "Dog_hunting_hound/rotations/east.png",
+          "north-east": "Dog_hunting_hound/rotations/north-east.png",
+          "north": "Dog_hunting_hound/rotations/north.png",
+          "north-west": "Dog_hunting_hound/rotations/north-west.png",
+          "west": "Dog_hunting_hound/rotations/west.png",
+          "south-west": "Dog_hunting_hound/rotations/south-west.png"
+        },
+        "animations": {
+          "sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9": {
+            "south": [
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_000.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_001.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_002.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_003.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_004.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_005.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_006.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_007.png",
+              "Dog_hunting_hound/animations/sitting_upright_on_hind_legs_head_thrown_back_laug-620f25e9/south/frame_008.png"
+            ]
+          },
+          "crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52": {
+            "east": [
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_000.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_001.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_002.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_003.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_004.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_005.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_006.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_007.png",
+              "Dog_hunting_hound/animations/crouched_low_sniffing_the_ground_intently_head_dow-b42d7c52/east/frame_008.png"
+            ]
+          },
+          "standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46": {
+            "south": [
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_000.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_001.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_002.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_003.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_004.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_005.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_006.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_007.png",
+              "Dog_hunting_hound/animations/standing_tall_on_hind_legs_proudly_holding_a_limp-c77e0a46/south/frame_008.png"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "export_version": "3.0",
+  "export_date": "2026-05-27T16:30:07.982740"
+}
