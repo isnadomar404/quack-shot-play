@@ -151,6 +151,26 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-ESC", () => {
       if (this.mode === "settings") this.closeSettings();
     });
+    // Settings menu: arrow-key navigation + Enter to activate.
+    const kb = this.input.keyboard;
+    if (kb) {
+      kb.addCapture("UP,DOWN,LEFT,RIGHT"); // don't let arrows scroll the page
+      kb.on("keydown-UP", () => {
+        if (this.mode === "settings") this.settingsMenu.moveFocus(-1);
+      });
+      kb.on("keydown-DOWN", () => {
+        if (this.mode === "settings") this.settingsMenu.moveFocus(1);
+      });
+      kb.on("keydown-LEFT", () => {
+        if (this.mode === "settings") this.settingsMenu.adjustFocus(-1);
+      });
+      kb.on("keydown-RIGHT", () => {
+        if (this.mode === "settings") this.settingsMenu.adjustFocus(1);
+      });
+      kb.on("keydown-ENTER", () => {
+        if (this.mode === "settings") this.settingsMenu.activateFocus();
+      });
+    }
 
     // Tracking-quality dot (top-right); hidden until hand tracking is up.
     this.tracking = new TrackingIndicator(this);
@@ -544,12 +564,14 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(fireX - 13, fireBaseY - 2, 26, 4);
     g.fillRect(fireX - 9, fireBaseY - 5, 7, 6);
     g.fillRect(fireX + 4, fireBaseY - 5, 7, 6);
-    this.drawBone(g, 198, fireBaseY - 1);
+    // Bone at the dog's snout (just in front of its lowered head) so it reads
+    // as the dog licking it — see the dog placement below.
+    this.drawBone(g, 196, groundY + 8);
     this.interludeObjects.push(g);
 
-    // The camper (PixelLab sprite), standing by the fire, facing it.
+    // The camper (PixelLab sprite), standing right by the fire, facing it.
     const man = this.add
-      .image(120, groundY + 20, "man")
+      .image(139, groundY + 20, "man")
       .setOrigin(0.5, 1)
       .setScale(0.62)
       .setDepth(76);
@@ -558,14 +580,14 @@ export class GameScene extends Phaser.Scene {
     // A roasting stick from the camper out over the flames, with food on the end.
     const skewer = this.add.graphics().setDepth(79);
     skewer.lineStyle(2, 0x566c86, 1);
-    skewer.lineBetween(128, groundY + 2, fireX - 4, fireBaseY - 16);
+    skewer.lineBetween(150, groundY + 1, fireX - 4, fireBaseY - 16);
     skewer.fillStyle(0xb13e53, 1);
     skewer.fillRect(fireX - 8, fireBaseY - 19, 5, 5);
     this.interludeObjects.push(skewer);
 
-    // The dog, head down beside the bone (sniff anim reads as licking/eating).
+    // The dog, head down right at the bone (sniff anim reads as licking it).
     const dog = this.add
-      .sprite(216, groundY + 12, ANIM.DOG_SNIFF.key)
+      .sprite(208, groundY + 12, ANIM.DOG_SNIFF.key)
       .setOrigin(0.5, 1)
       .setScale(DOG.SPRITE_SCALE)
       .setDepth(80)
