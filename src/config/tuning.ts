@@ -302,6 +302,13 @@ export const LEVEL = {
   STAR_COLOR: 0xf4f4f4, // PALETTE[12]
 } as const;
 
+/** Between-level interlude — the campfire/barbeque scene shown after a level
+ *  clears, before the next level starts. */
+export const INTERLUDE = {
+  DURATION_MS: 5500,
+  FLAME_TICK_MS: 90, // how often the campfire flames are redrawn (flicker)
+} as const;
+
 /** Player-tweakable settings (the in-game Settings menu). The runtime store
  *  (`src/config/settings.ts`) holds the live values, persisted to localStorage,
  *  and the gesture pipeline reads from it. These are the ranges + mappings; the

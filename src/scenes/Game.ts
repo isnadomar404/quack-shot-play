@@ -2,12 +2,13 @@ import Phaser from "phaser";
 import {
   ANIM,
   DISPLAY,
+  DOG,
   DUCK,
   FX,
   GROUND_Y_FRACTION,
   HAND,
+  INTERLUDE,
   LEVEL,
-  ROUND,
   SCENE,
   SHOTS,
   TITLE_FX,
@@ -52,6 +53,7 @@ type Mode =
   | "playing"
   | "reaction"
   | "transition"
+  | "interlude"
   | "gameover";
 
 /** Steps of the calibration-as-tutorial first-run flow (hand path only). */
@@ -80,6 +82,9 @@ export class GameScene extends Phaser.Scene {
   private feathers!: Phaser.GameObjects.Particles.ParticleEmitter;
   /** All backdrop/atmosphere objects for the active level — rebuilt on advance. */
   private sceneLayers: Phaser.GameObjects.GameObject[] = [];
+  /** Between-level campfire interlude objects + its flame-flicker timer. */
+  private interludeObjects: Phaser.GameObjects.GameObject[] = [];
+  private flameTimer: Phaser.Time.TimerEvent | undefined;
   private readonly score = new Score();
   private readonly round = new RoundManager();
   private shotsLeft = SHOTS.PER_DUCK;
@@ -177,6 +182,7 @@ export class GameScene extends Phaser.Scene {
       this.clearTitle();
       this.clearCalib();
       this.clearScene();
+      this.clearInterlude();
       this.settingsMenu.close();
       sfx.stopMusic();
       if (this.audioUnlock) {
@@ -506,22 +512,156 @@ export class GameScene extends Phaser.Scene {
     const threshold = this.round.passThreshold;
 
     if (this.round.passed) {
-      this.mode = "transition";
       sfx.levelClear();
-      const clearedName = this.round.levelName;
-      this.showBanner(
-        `${clearedName.toUpperCase()} CLEAR`,
-        `bagged ${bagged}/${threshold}`,
-      );
-      this.time.delayedCall(ROUND.TRANSITION_MS, () => {
+      // Celebrate with the campfire interlude (on this biome), then advance.
+      this.playInterlude(bagged, threshold, () => {
         this.round.advance();
         this.buildScene(this.round.level); // swap to the next biome
-        this.clearBanner();
         this.startRound();
       });
     } else {
       this.triggerGameOver();
     }
+  }
+
+  /** Between-level interlude: a man grilling by a campfire with the dog licking
+   *  a bone, on the just-cleared biome backdrop, for a few seconds. */
+  private playInterlude(
+    bagged: number,
+    threshold: number,
+    onDone: () => void,
+  ): void {
+    this.mode = "interlude";
+    this.clearInterlude();
+    const groundY = Math.floor(DISPLAY.HEIGHT * GROUND_Y_FRACTION);
+    const fireX = 162;
+    const fireBaseY = groundY + 24;
+
+    // Static elements (logs, the man, the bone) — above the visibility dim so
+    // the campfire scene reads bright even on the dark levels.
+    const g = this.add.graphics().setDepth(75);
+    g.fillStyle(0x333c57, 1); // crossed logs
+    g.fillRect(fireX - 13, fireBaseY - 2, 26, 4);
+    g.fillRect(fireX - 9, fireBaseY - 5, 7, 6);
+    g.fillRect(fireX + 4, fireBaseY - 5, 7, 6);
+    this.drawMan(g, 110, groundY + 22, fireX);
+    this.drawBone(g, 198, fireBaseY - 1);
+    this.interludeObjects.push(g);
+
+    // The dog, head down beside the bone (sniff anim reads as licking/eating).
+    const dog = this.add
+      .sprite(216, groundY + 12, ANIM.DOG_SNIFF.key)
+      .setOrigin(0.5, 1)
+      .setScale(DOG.SPRITE_SCALE)
+      .setDepth(80)
+      .setFlipX(true); // face left toward the bone + fire
+    dog.play(ANIM.DOG_SNIFF.key);
+    this.interludeObjects.push(dog);
+
+    // Flickering flames, redrawn on a timer.
+    const flames = this.add.graphics().setDepth(78);
+    this.interludeObjects.push(flames);
+    const flicker = (): void => this.drawFlames(flames, fireX, fireBaseY);
+    flicker();
+    this.flameTimer = this.time.addEvent({
+      delay: INTERLUDE.FLAME_TICK_MS,
+      loop: true,
+      callback: flicker,
+    });
+
+    // Header + subtitle.
+    const header = this.add
+      .text(DISPLAY.WIDTH / 2, 34, `${this.round.levelName.toUpperCase()} CLEAR`, {
+        fontFamily: TYPO.HEADING,
+        fontSize: "12px",
+        color: TITLE_FX.LOGO_FILL,
+      })
+      .setOrigin(0.5)
+      .setDepth(92);
+    header.setStroke(TITLE_FX.LOGO_STROKE, 3);
+    header.setShadow(0, 2, TITLE_FX.LOGO_SHADOW, 0, true, true);
+    const sub = this.add
+      .text(
+        DISPLAY.WIDTH / 2,
+        52,
+        `bagged ${bagged}/${threshold} · next: ${this.round.nextLevelName}`,
+        { fontFamily: TYPO.BODY, fontSize: "8px", color: "#f4f4f4" },
+      )
+      .setOrigin(0.5)
+      .setDepth(92);
+    this.interludeObjects.push(header, sub);
+
+    this.time.delayedCall(INTERLUDE.DURATION_MS, () => {
+      this.clearInterlude();
+      onDone();
+    });
+  }
+
+  private clearInterlude(): void {
+    if (this.flameTimer) {
+      this.flameTimer.remove();
+      this.flameTimer = undefined;
+    }
+    this.interludeObjects.forEach((o) => {
+      this.tweens.killTweensOf(o);
+      o.destroy();
+    });
+    this.interludeObjects = [];
+  }
+
+  /** Redraw the campfire flames with a little random flicker. */
+  private drawFlames(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    baseY: number,
+  ): void {
+    const j = (a: number): number => (Math.random() * 2 - 1) * a;
+    g.clear();
+    g.fillStyle(0xb13e53, 1); // red outer
+    g.fillTriangle(x - 9, baseY, x + j(3), baseY - 22 + j(4), x + 9, baseY);
+    g.fillStyle(0xef7d57, 1); // orange mid
+    g.fillTriangle(x - 6, baseY, x + j(2), baseY - 16 + j(4), x + 6, baseY);
+    g.fillStyle(0xffcd75, 1); // yellow core
+    g.fillTriangle(x - 3, baseY, x + j(1), baseY - 9 + j(3), x + 3, baseY);
+    // A couple of rising sparks.
+    g.fillStyle(0xffcd75, 1);
+    g.fillRect(x + j(8), baseY - 24 + j(6), 1, 1);
+    g.fillRect(x + j(8), baseY - 28 + j(6), 1, 1);
+  }
+
+  /** A simple seated pixel man grilling a skewer over the fire at fireX. */
+  private drawMan(
+    g: Phaser.GameObjects.Graphics,
+    mx: number,
+    baseY: number,
+    fireX: number,
+  ): void {
+    g.fillStyle(0x29366f, 1); // legs (sitting, extended toward the fire)
+    g.fillRect(mx - 3, baseY - 4, 18, 4);
+    g.fillStyle(0xb13e53, 1); // torso / shirt
+    g.fillRect(mx - 4, baseY - 16, 9, 13);
+    g.fillStyle(0xffcd75, 1); // arm + skewer reaching toward the fire
+    g.fillRect(mx + 4, baseY - 14, fireX - mx - 8, 2);
+    g.fillStyle(0x566c86, 1); // food on the skewer, over the flames
+    g.fillRect(fireX - 8, baseY - 15, 4, 4);
+    g.fillStyle(0xffcd75, 1); // head
+    g.fillCircle(mx, baseY - 19, 4);
+    g.fillStyle(0x333c57, 1); // cap / hair
+    g.fillRect(mx - 4, baseY - 23, 9, 3);
+  }
+
+  /** A small white bone for the dog. */
+  private drawBone(
+    g: Phaser.GameObjects.Graphics,
+    bx: number,
+    by: number,
+  ): void {
+    g.fillStyle(0xf4f4f4, 1);
+    g.fillRect(bx - 4, by - 1, 9, 2);
+    g.fillCircle(bx - 4, by - 1.5, 1.6);
+    g.fillCircle(bx - 4, by + 1.5, 1.6);
+    g.fillCircle(bx + 5, by - 1.5, 1.6);
+    g.fillCircle(bx + 5, by + 1.5, 1.6);
   }
 
   /** End the run — the player missed the level's pass threshold (milestone).

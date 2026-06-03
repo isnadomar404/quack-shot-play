@@ -28,6 +28,11 @@ export class RoundManager {
     return this.level.name;
   }
 
+  /** Name of the level that comes after the current one (for the interlude). */
+  get nextLevelName(): string {
+    return LEVELS[(this.levelIndex + 1) % LEVELS.length].name;
+  }
+
   /** Per-target hit/miss results for the current level (length = presented). */
   get results(): readonly boolean[] {
     return this.hits;
