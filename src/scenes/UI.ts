@@ -4,8 +4,8 @@ import { HUD_EVENT, type HudState } from "./Game";
 
 /**
  * UIScene — HUD layer above the Game scene, driven by HUD events. Shows score,
- * shots-left, round number, and the ducks-bagged row (hit / miss / pending) with
- * the round's pass threshold. Decoupled from gameplay via game-level events.
+ * shots-left, the active level name, and the targets-bagged row (hit / miss /
+ * pending) with the level's pass threshold. Decoupled from gameplay via events.
  */
 export class UIScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
@@ -32,7 +32,7 @@ export class UIScene extends Phaser.Scene {
     };
     this.scoreText = this.add.text(6, 3, "SCORE 000000", label).setDepth(10);
     this.roundText = this.add
-      .text(DISPLAY.WIDTH / 2, 3, "ROUND 1", label)
+      .text(DISPLAY.WIDTH / 2, 3, "MEADOW", label)
       .setOrigin(0.5, 0)
       .setDepth(10);
     this.shotsText = this.add
@@ -52,7 +52,7 @@ export class UIScene extends Phaser.Scene {
     const onHud = (state: HudState): void => {
       this.scoreText.setText(`SCORE ${String(state.score).padStart(6, "0")}`);
       this.shotsText.setText(`SHOTS ${state.shots}`);
-      this.roundText.setText(`ROUND ${state.round}`);
+      this.roundText.setText(state.levelName.toUpperCase());
       this.bagText.setText(this.buildBagRow(state));
     };
     this.game.events.on(HUD_EVENT, onHud);
@@ -76,7 +76,7 @@ export class UIScene extends Phaser.Scene {
   /** hit = ●, miss = ×, not-yet-presented = ·  (+ pass threshold). */
   private buildBagRow(state: HudState): string {
     let row = "";
-    for (let i = 0; i < state.ducksPerRound; i++) {
+    for (let i = 0; i < state.targetsPerRound; i++) {
       const result = state.results[i];
       row += result === undefined ? "·" : result ? "●" : "×";
     }

@@ -19,7 +19,8 @@ The original used an NES Zapper light gun reading CRT screen flashes — impossi
 - **4 — Retro feel.** ✅ sprites, SFX, popups, title/game-over, CRT scanlines, shake, feathers. Pixel-font arcade UI + layered backdrop.
 - **5 — Ship.** ✅ hi-score (localStorage), responsive scaling, static deploy.
 - **6 — Hand integration.** ✅ `HandInputSource` behind the interface, mouse fallback.
-- **V2 — Pinch + feedback overhaul (current).** Pinch fire + position latch, `KeyboardInputSource`, tracking-quality dot, 3-state crosshair component, calibration-as-tutorial first-run flow. Tune in `src/config/tuning.ts`.
+- **V2 — Pinch + feedback overhaul.** Pinch fire + position latch, `KeyboardInputSource`, tracking-quality dot, 3-state crosshair component, calibration-as-tutorial first-run flow. Tune in `src/config/tuning.ts`.
+- **Levels (LEVELS.md).** Round system reads from a per-level `LevelConfig` (`src/levels/`) instead of hard-coded constants. Six biomes Meadow→Night with weighted spawn tables, flight-path styles (sine/straight/sharp_turns/zigzag), procedural backdrops, and atmospheric systems (foreground occlusion, wind drift, visibility dim, night silhouettes), looping endlessly at a rising pace. New species art is a drop-in behind `SPECIES_ART`.
 
 ## Key architectural move
 Abstract input behind `InputSource { poll(): {x, y, isFiring} }`. The whole game runs on `MouseInputSource`; `HandInputSource` swaps in behind the same interface. `KeyboardInputSource` (`SPACEBAR` = fire) is wired alongside the mouse. This buys four things: develop without a camera in your face; the gesture layer is an isolated, de-riskable module; the game stays playable without a camera or for players who can't gesture; and you get a hardware-independent debugging input.

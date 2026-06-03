@@ -1,22 +1,34 @@
-import { ROUND, SCORE } from "../config/tuning";
+import { LEVEL } from "../config/tuning";
+import { LEVELS, type LevelConfig } from "../levels";
 
 /**
- * RoundManager — owns the round/progression rules (CLAUDE.md game rules):
- * 10 ducks per round, a rising pass threshold, per-round speed ramp, and
- * round-scaled scoring. Pure logic; holds no Phaser objects.
+ * RoundManager — owns level progression (LEVELS.md). The game advances through
+ * the ordered LEVELS array; each level is one round of `targetsPerRound`
+ * targets with its own `passThreshold`. Clearing a level advances to the next;
+ * after the last level it loops (endless) at a higher pace via `speedMultiplier`.
  *
- * The scene reports each resolved duck via recordDuck(); when the round fills
- * up (isRoundComplete) the scene checks passed() to advance or end the game.
+ * Pure logic — reads only from the active LevelConfig, holds no Phaser objects.
  */
 export class RoundManager {
-  private roundNumber = 1;
-  private readonly hits: boolean[] = []; // per-duck results this round, in order
+  private levelIndex = 0;
+  private cycle = 0; // how many full loops through all levels (endless ramp)
+  private readonly hits: boolean[] = []; // per-target results this level, in order
 
-  get current(): number {
-    return this.roundNumber;
+  /** The active level's config. */
+  get level(): LevelConfig {
+    return LEVELS[this.levelIndex];
   }
 
-  /** Per-duck hit/miss results for the current round (length = ducks presented). */
+  /** 1-based overall level number across endless cycles (for the HUD). */
+  get current(): number {
+    return this.cycle * LEVELS.length + this.levelIndex + 1;
+  }
+
+  get levelName(): string {
+    return this.level.name;
+  }
+
+  /** Per-target hit/miss results for the current level (length = presented). */
   get results(): readonly boolean[] {
     return this.hits;
   }
@@ -25,50 +37,54 @@ export class RoundManager {
     return this.hits.filter(Boolean).length;
   }
 
-  /** Ducks needed to advance this round. */
+  get targetsPerRound(): number {
+    return this.level.targetsPerRound;
+  }
+
+  /** Targets you must bag to advance this level. */
   get passThreshold(): number {
-    const raw =
-      ROUND.PASS_THRESHOLD_BASE +
-      Math.floor((this.roundNumber - 1) * ROUND.PASS_THRESHOLD_STEP_PER_ROUND);
-    return Math.min(raw, ROUND.PASS_THRESHOLD_MAX);
+    return this.level.passThreshold;
   }
 
-  /** Duck-speed multiplier for this round. Round 1 = SPEED_FACTOR_BASE (gentle),
-   *  ramping up each round to the cap. */
-  get speedFactor(): number {
-    const raw =
-      ROUND.SPEED_FACTOR_BASE + (this.roundNumber - 1) * ROUND.SPEED_FACTOR_STEP;
-    return Math.min(raw, ROUND.SPEED_FACTOR_MAX);
-  }
-
-  /** Points a hit is worth this round. */
-  get scorePerHit(): number {
-    return SCORE.PER_HIT_BASE * this.roundNumber;
+  /** Global speed scaler — 1 on the first pass, rising each endless loop. */
+  get speedMultiplier(): number {
+    return 1 + this.cycle * LEVEL.CYCLE_SPEED_STEP;
   }
 
   get isRoundComplete(): boolean {
-    return this.hits.length >= ROUND.DUCKS_PER_ROUND;
+    return this.hits.length >= this.targetsPerRound;
   }
 
   get passed(): boolean {
     return this.baggedCount >= this.passThreshold;
   }
 
-  /** Record a resolved duck. Returns the score awarded (0 on a miss). */
-  recordDuck(hit: boolean): number {
-    this.hits.push(hit);
-    return hit ? this.scorePerHit : 0;
+  /** True when the just-cleared level was the last in the progression. */
+  get isFinalLevel(): boolean {
+    return this.levelIndex === LEVELS.length - 1;
   }
 
-  /** Advance to the next round and clear per-round results. */
+  /** Record a resolved target. Returns the score awarded (0 on a miss) — the
+   *  per-species base from the spawn entry. */
+  recordTarget(hit: boolean, scoreBase: number): number {
+    this.hits.push(hit);
+    return hit ? scoreBase : 0;
+  }
+
+  /** Advance to the next level (looping to the start at a higher cycle). */
   advance(): void {
-    this.roundNumber++;
+    this.levelIndex++;
+    if (this.levelIndex >= LEVELS.length) {
+      this.levelIndex = 0;
+      this.cycle++;
+    }
     this.hits.length = 0;
   }
 
-  /** Reset to round 1 for a fresh game. */
+  /** Reset to the first level for a fresh game. */
   resetGame(): void {
-    this.roundNumber = 1;
+    this.levelIndex = 0;
+    this.cycle = 0;
     this.hits.length = 0;
   }
 }

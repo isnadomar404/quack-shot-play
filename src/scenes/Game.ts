@@ -6,6 +6,7 @@ import {
   FX,
   GROUND_Y_FRACTION,
   HAND,
+  LEVEL,
   ROUND,
   SCENE,
   SHOTS,
@@ -16,11 +17,12 @@ import type { InputSource, InputState } from "../input/InputSource";
 import { MouseInputSource } from "../input/MouseInputSource";
 import { KeyboardInputSource } from "../input/KeyboardInputSource";
 import { HandInputSource } from "../input/HandInputSource";
-import { Duck } from "../game/duck";
+import { Target } from "../game/target";
 import { Dog } from "../game/dog";
 import { Score } from "../game/score";
 import { RoundManager } from "../game/round";
 import { loadHiScore, saveHiScore } from "../game/highscore";
+import type { LevelConfig, SpawnEntry } from "../levels/LevelConfig";
 import { Crosshair } from "../ui/crosshair";
 import { TrackingIndicator } from "../ui/trackingIndicator";
 import { sfx } from "../audio/sfx";
@@ -29,9 +31,11 @@ import { sfx } from "../audio/sfx";
 export interface HudState {
   score: number;
   shots: number;
+  /** Overall level number (1-based, counts up across endless cycles). */
   round: number;
+  levelName: string;
   threshold: number;
-  ducksPerRound: number;
+  targetsPerRound: number;
   results: readonly boolean[];
 }
 export const HUD_EVENT = "hud:update";
@@ -69,9 +73,11 @@ const CORNER_TARGETS: ReadonlyArray<readonly [number, number]> = [
  */
 export class GameScene extends Phaser.Scene {
   private inputSource!: InputSource;
-  private duck!: Duck;
+  private target!: Target;
   private dog!: Dog;
   private feathers!: Phaser.GameObjects.Particles.ParticleEmitter;
+  /** All backdrop/atmosphere objects for the active level — rebuilt on advance. */
+  private sceneLayers: Phaser.GameObjects.GameObject[] = [];
   private readonly score = new Score();
   private readonly round = new RoundManager();
   private shotsLeft = SHOTS.PER_DUCK;
@@ -108,7 +114,7 @@ export class GameScene extends Phaser.Scene {
       typeof window !== "undefined" && "matchMedia" in window
         ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
         : false;
-    this.drawBackdrop();
+    this.buildScene(this.round.level);
 
     // Mouse is the instant, permanent baseline so the game is playable while the
     // hand model downloads — and stays the fallback if there's no camera. We then
@@ -157,6 +163,7 @@ export class GameScene extends Phaser.Scene {
       this.keyboard.stop();
       this.clearTitle();
       this.clearCalib();
+      this.clearScene();
       if (this.audioUnlock) {
         window.removeEventListener("pointerdown", this.audioUnlock);
         window.removeEventListener("keydown", this.audioUnlock);
@@ -207,19 +214,37 @@ export class GameScene extends Phaser.Scene {
     this.tracking.set(hs ? hs.confidence : null, hs ? hs.handPresent : false);
   }
 
-  /** Round opens with the dog's sniff-walk; first duck spawns when it dives in. */
+  /** Round opens with the dog's sniff-walk; first target spawns when it dives in. */
   private startRound(): void {
     this.mode = "intro";
     this.emitHud();
-    this.dog.playIntro(() => this.beginNextDuck());
+    this.dog.playIntro(() => this.beginNextTarget());
   }
 
-  private beginNextDuck(): void {
+  private beginNextTarget(): void {
     this.mode = "playing";
-    this.duck = new Duck(this, this.round.speedFactor);
+    const level = this.round.level;
+    const entry = this.pickSpawnEntry(level.spawnTable);
+    this.target = new Target(this, entry, {
+      speedMultiplier: this.round.speedMultiplier,
+      ...(level.atmosphere.windVector
+        ? { wind: level.atmosphere.windVector }
+        : {}),
+      ...(level.silhouette ? { silhouette: true } : {}),
+    });
     this.shotsLeft = SHOTS.PER_DUCK;
     sfx.quack();
     this.emitHud();
+  }
+
+  /** Weighted random pick from the level's spawn table. */
+  private pickSpawnEntry(table: readonly SpawnEntry[]): SpawnEntry {
+    const total = table.reduce((sum, e) => sum + e.weight, 0);
+    let r = Math.random() * total;
+    for (const entry of table) {
+      if ((r -= entry.weight) < 0) return entry;
+    }
+    return table[table.length - 1];
   }
 
   private emitHud(): void {
@@ -227,8 +252,9 @@ export class GameScene extends Phaser.Scene {
       score: this.score.total,
       shots: this.shotsLeft,
       round: this.round.current,
+      levelName: this.round.levelName,
       threshold: this.round.passThreshold,
-      ducksPerRound: ROUND.DUCKS_PER_ROUND,
+      targetsPerRound: this.round.targetsPerRound,
       results: this.round.results,
     };
     this.game.events.emit(HUD_EVENT, state);
@@ -252,20 +278,20 @@ export class GameScene extends Phaser.Scene {
       this.clearTitle();
       this.startRound();
     } else if (this.mode === "playing") {
-      if (input.isFiring && this.duck.isFlying() && this.shotsLeft > 0) {
+      if (input.isFiring && this.target.isFlying() && this.shotsLeft > 0) {
         this.shotsLeft--;
         sfx.shot();
         this.cameras.main.shake(FX.SHAKE_FIRE_MS, FX.SHAKE_FIRE_INTENSITY);
-        if (this.duck.contains(input.x, input.y)) {
+        if (this.target.contains(input.x, input.y)) {
           this.onHit(input.x, input.y);
         } else if (this.shotsLeft === 0) {
-          this.duck.flee();
+          this.target.flee();
         }
         this.emitHud();
       }
 
-      this.duck.update(deltaMs);
-      if (this.duck.isGone()) this.resolveDuck();
+      this.target.update(deltaMs);
+      if (this.target.isGone()) this.resolveTarget();
     } else if (this.mode === "gameover" && input.isFiring) {
       this.restartGame();
     }
@@ -419,26 +445,26 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onHit(x: number, y: number): void {
-    this.duck.hit();
+    this.target.hit();
     sfx.fallWhistle();
-    this.feathers.explode(FX.FEATHER_COUNT, this.duck.x, this.duck.y);
+    this.feathers.explode(FX.FEATHER_COUNT, this.target.x, this.target.y);
     this.cameras.main.shake(FX.SHAKE_HIT_MS, FX.SHAKE_HIT_INTENSITY);
-    this.showPopup(x, y, `+${this.round.scorePerHit}`);
+    this.showPopup(x, y, `+${this.target.scoreBase}`);
   }
 
-  private resolveDuck(): void {
-    const hit = this.duck.outcome === "hit";
-    const x = this.duck.x;
-    const awarded = this.round.recordDuck(hit);
+  private resolveTarget(): void {
+    const hit = this.target.outcome === "hit";
+    const x = this.target.x;
+    const awarded = this.round.recordTarget(hit, this.target.scoreBase);
     if (awarded > 0) this.score.add(awarded);
-    this.duck.destroy();
+    this.target.destroy();
     this.emitHud();
 
     // Dog reacts before the loop continues — retrieve on hit, mockery on miss.
     this.mode = "reaction";
     const next = (): void => {
       if (this.round.isRoundComplete) this.endRound();
-      else this.beginNextDuck();
+      else this.beginNextTarget();
     };
     if (hit) {
       this.dog.playRetrieve(x, next);
@@ -455,12 +481,14 @@ export class GameScene extends Phaser.Scene {
     if (this.round.passed) {
       this.mode = "transition";
       sfx.roundClear();
+      const clearedName = this.round.levelName;
       this.showBanner(
-        `ROUND ${this.round.current} CLEAR`,
+        `${clearedName.toUpperCase()} CLEAR`,
         `bagged ${bagged}/${threshold}`,
       );
       this.time.delayedCall(ROUND.TRANSITION_MS, () => {
         this.round.advance();
+        this.buildScene(this.round.level); // swap to the next biome
         this.clearBanner();
         this.startRound();
       });
@@ -506,25 +534,30 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Layered, parallax-style playfield backdrop — drawn once, behind everything.
-   *  Sky comes from the canvas clear colour; here we stack distant hills, a
-   *  bright horizon line, the grass with a sunlit top edge + shadow, and a row
-   *  of foreground bushes. PALETTE only (CLAUDE.md lock). */
-  private drawBackdrop(): void {
+  /** Build the procedural backdrop + atmosphere for a level (LEVELS.md). All
+   *  objects go in sceneLayers so advancing to the next biome can tear them down
+   *  and rebuild. Depth bands: sky -20, stars -19, hills/grass -10, mood tint
+   *  -5, clouds CLOUD_DEPTH, targets 6/12, foreground occluders FOREGROUND_DEPTH,
+   *  visibility dim VISIBILITY_DEPTH. PALETTE only (CLAUDE.md lock). */
+  private buildScene(level: LevelConfig): void {
+    this.clearScene();
+    const spec = level.backdrop;
     const W = DISPLAY.WIDTH;
     const H = DISPLAY.HEIGHT;
     const groundY = Math.floor(H * GROUND_Y_FRACTION);
+
+    // Sky fill behind everything.
+    const sky = this.add.graphics().setDepth(-20);
+    sky.fillStyle(spec.sky, 1);
+    sky.fillRect(0, 0, W, H);
+    this.sceneLayers.push(sky);
+
+    if (spec.stars) this.drawStars(groundY);
+
     const g = this.add.graphics().setDepth(-10);
-
-    // Clouds live on their own layer (between far and near ducks) so a duck can
-    // pass behind them when high/far and in front when low/near.
-    const cloudG = this.add.graphics().setDepth(SCENE.CLOUD_DEPTH);
-    this.drawCloud(cloudG, 50, 40, 1);
-    this.drawCloud(cloudG, 210, 26, 1.25);
-    this.drawCloud(cloudG, 275, 64, 0.8);
-
-    // Distant teal hills (only their tops show above the grass line).
-    g.fillStyle(SCENE.HILL_FAR, 1);
+    if (spec.foreground === "peaks") this.drawPeaks(g, groundY, spec.foregroundColor);
+    // Distant hills (only their tops show above the grass line).
+    g.fillStyle(spec.hillFar, 1);
     for (const [cx, r] of [
       [60, 46],
       [150, 60],
@@ -533,8 +566,7 @@ export class GameScene extends Phaser.Scene {
     ] as const) {
       g.fillCircle(cx, groundY + 6, r);
     }
-    // Nearer green hills.
-    g.fillStyle(SCENE.HILL_NEAR, 1);
+    g.fillStyle(spec.hillNear, 1);
     for (const [cx, r] of [
       [16, 34],
       [110, 40],
@@ -543,18 +575,15 @@ export class GameScene extends Phaser.Scene {
     ] as const) {
       g.fillCircle(cx, groundY + 10, r);
     }
-    // Bright horizon line.
-    g.fillStyle(SCENE.HORIZON_HIGHLIGHT, 1);
+    g.fillStyle(spec.horizon, 1);
     g.fillRect(0, groundY - 2, W, 1);
-    // Grass body + sunlit top edge + shadow strip.
-    g.fillStyle(SCENE.GRASS, 1);
+    g.fillStyle(spec.grass, 1);
     g.fillRect(0, groundY, W, H - groundY);
-    g.fillStyle(SCENE.GRASS_HIGHLIGHT, 1);
+    g.fillStyle(spec.grassHighlight, 1);
     g.fillRect(0, groundY, W, 2);
-    g.fillStyle(SCENE.GRASS_SHADOW, 1);
+    g.fillStyle(spec.grassShadow, 1);
     g.fillRect(0, groundY + 4, W, 2);
-    // Foreground bush clumps on the horizon.
-    g.fillStyle(SCENE.BUSH, 1);
+    g.fillStyle(spec.bush, 1);
     for (const [cx, r] of [
       [36, 9],
       [96, 7],
@@ -563,6 +592,137 @@ export class GameScene extends Phaser.Scene {
       [300, 9],
     ] as const) {
       g.fillCircle(cx, groundY + 2, r);
+    }
+    this.sceneLayers.push(g);
+
+    if (spec.clouds) {
+      const cloudG = this.add.graphics().setDepth(SCENE.CLOUD_DEPTH);
+      this.drawCloud(cloudG, 50, 40, 1);
+      this.drawCloud(cloudG, 210, 26, 1.25);
+      this.drawCloud(cloudG, 275, 64, 0.8);
+      this.sceneLayers.push(cloudG);
+    }
+
+    // Mood tint over the backdrop (still below targets), from the locked palette.
+    if (spec.tintHex) {
+      const tint = this.add.graphics().setDepth(-5);
+      tint.fillStyle(Phaser.Display.Color.HexStringToColor(spec.tintHex).color, 0.2);
+      tint.fillRect(0, 0, W, H);
+      this.sceneLayers.push(tint);
+    }
+
+    // Near grass + bush hedge IN FRONT of targets — a shot target sinks behind
+    // this when it falls (hides behind the bushes), and ducks rise out of it.
+    this.drawFrontFoliage(spec, groundY);
+
+    // Occluding foreground IN FRONT of targets.
+    if (spec.foreground === "reeds") this.drawReeds(spec.foregroundColor);
+    else if (spec.foreground === "branches") this.drawBranches(spec.foregroundColor);
+
+    // Reduced-visibility dim overlay (above the playfield, below crosshair/HUD).
+    const vis = level.atmosphere.visibility;
+    if (vis !== undefined && vis < 1) {
+      const dim = this.add.graphics().setDepth(LEVEL.VISIBILITY_DEPTH);
+      dim.fillStyle(LEVEL.VISIBILITY_COLOR, 1 - vis);
+      dim.fillRect(0, 0, W, H);
+      this.sceneLayers.push(dim);
+    }
+  }
+
+  private clearScene(): void {
+    this.sceneLayers.forEach((o) => o.destroy());
+    this.sceneLayers = [];
+  }
+
+  /** Near grass + bush hedge drawn IN FRONT of targets (FOREGROUND_DEPTH). A
+   *  hit target sinks behind this as it falls; flying targets rise out of it. */
+  private drawFrontFoliage(
+    spec: LevelConfig["backdrop"],
+    groundY: number,
+  ): void {
+    const W = DISPLAY.WIDTH;
+    const H = DISPLAY.HEIGHT;
+    const f = this.add.graphics().setDepth(LEVEL.FOREGROUND_DEPTH);
+    // Grass body from the horizon down, with a lit top edge + shadow strip.
+    f.fillStyle(spec.grass, 1);
+    f.fillRect(0, groundY, W, H - groundY);
+    f.fillStyle(spec.grassHighlight, 1);
+    f.fillRect(0, groundY, W, 2);
+    f.fillStyle(spec.grassShadow, 1);
+    f.fillRect(0, groundY + 4, W, 2);
+    // A low bush hedge cresting the grass line, so targets tuck behind it.
+    f.fillStyle(spec.bush, 1);
+    for (const [cx, r] of [
+      [24, 11],
+      [72, 9],
+      [130, 12],
+      [190, 10],
+      [248, 12],
+      [300, 10],
+    ] as const) {
+      f.fillCircle(cx, groundY + 3, r);
+    }
+    this.sceneLayers.push(f);
+  }
+
+  /** Night starfield in the sky band. */
+  private drawStars(groundY: number): void {
+    const s = this.add.graphics().setDepth(-19);
+    s.fillStyle(LEVEL.STAR_COLOR, 1);
+    for (let i = 0; i < LEVEL.STAR_COUNT; i++) {
+      const x = Math.floor(Math.random() * DISPLAY.WIDTH);
+      const y = Math.floor(Math.random() * (groundY - 12)) + 2;
+      s.fillRect(x, y, 1, 1);
+    }
+    this.sceneLayers.push(s);
+  }
+
+  /** Occluding marsh reeds rising from the bottom edge. */
+  private drawReeds(color: number): void {
+    const r = this.add.graphics().setDepth(LEVEL.FOREGROUND_DEPTH);
+    r.fillStyle(color, 1);
+    const H = DISPLAY.HEIGHT;
+    for (let x = 3; x < DISPLAY.WIDTH; x += 13) {
+      const h = 34 + Math.floor(Math.random() * 44);
+      const w = 2 + Math.floor(Math.random() * 2);
+      r.fillRect(x, H - h, w, h);
+      r.fillRect(x - 2, H - h, 6, 3); // a small frond near the tip
+    }
+    this.sceneLayers.push(r);
+  }
+
+  /** Occluding forest branches hanging from the top edge. */
+  private drawBranches(color: number): void {
+    const b = this.add.graphics().setDepth(LEVEL.FOREGROUND_DEPTH);
+    b.fillStyle(color, 1);
+    const W = DISPLAY.WIDTH;
+    b.fillRect(0, 0, W, 7); // canopy bar across the top
+    for (const [x, w, h] of [
+      [26, 7, 26],
+      [70, 6, 16],
+      [150, 8, 30],
+      [210, 6, 18],
+      [W - 40, 7, 24],
+    ] as ReadonlyArray<readonly [number, number, number]>) {
+      b.fillRect(x, 7, w, h); // twigs hanging down
+    }
+    this.sceneLayers.push(b);
+  }
+
+  /** Midground mountain peaks (drawn behind the hills, not occluding). */
+  private drawPeaks(
+    g: Phaser.GameObjects.Graphics,
+    groundY: number,
+    color: number,
+  ): void {
+    g.fillStyle(color, 1);
+    for (const [cx, h] of [
+      [44, 78],
+      [120, 96],
+      [196, 84],
+      [270, 100],
+    ] as const) {
+      g.fillTriangle(cx - 44, groundY, cx, groundY - h, cx + 44, groundY);
     }
   }
 

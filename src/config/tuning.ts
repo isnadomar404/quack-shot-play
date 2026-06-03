@@ -249,6 +249,8 @@ export const DUCK = {
   ESCAPE_TIMER_MS: 6000, // on-screen time flying before the duck flees upward
   FLEE_SPEED: 180, // upward speed once fleeing/escaping
   FALL_SPEED: 220, // downward speed after being hit
+  FALL_SINK: 22, // keep falling this far PAST the grass line, sinking behind the
+  // foreground foliage, before the target is gone (hides behind the bushes)
   FALL_SPIN_DPS: 360, // degrees/second spin while falling
   SPAWN_MARGIN: 30, // spawn inset from the screen edges
   /** Perspective: the duck shrinks as it climbs (flies into the distance) and
@@ -270,4 +272,30 @@ export const DUCK = {
   DIVE_SPEED: 80, // downward speed while swooping in from the top
   DIVE_TARGET_FRACTION: 0.5, // descend to this fraction of groundY, then climb
   EDGE_DRIFT_FACTOR: 0.5, // gentler upward drift for side/top entries
+} as const;
+
+/** Flight-path styles a SpawnEntry can request (LEVELS.md). These shape the
+ *  horizontal motion on top of the shared upward drift + perspective. */
+export const PATH = {
+  SINE_SWAY: 38, // px/s horizontal sway amplitude (sine)
+  SINE_HZ: 0.8, // sway oscillations per second (sine)
+  SHARP_TURN_MS: 600, // re-roll interval for sharp_turns (sudden direction flips)
+  ZIGZAG_MS: 260, // faster re-roll for zigzag
+} as const;
+
+/** Level-progression + atmospheric systems (LEVELS.md). Per-level specifics
+ *  live in src/levels/*; these are the cross-level knobs. */
+export const LEVEL = {
+  /** Endless replay: each full loop through all levels adds this much speed. */
+  CYCLE_SPEED_STEP: 0.15,
+  /** Dark dim overlay for atmosphere.visibility (< 1). */
+  VISIBILITY_COLOR: 0x1a1c2c, // PALETTE[0]
+  VISIBILITY_DEPTH: 70, // above the playfield, below crosshair/HUD
+  /** Night silhouette tint applied to every target. */
+  SILHOUETTE_COLOR: 0x1a1c2c, // PALETTE[0]
+  /** Occluding foreground (reeds / branches / peaks) drawn IN FRONT of targets. */
+  FOREGROUND_DEPTH: 20,
+  /** Starfield (night). */
+  STAR_COUNT: 44,
+  STAR_COLOR: 0xf4f4f4, // PALETTE[12]
 } as const;

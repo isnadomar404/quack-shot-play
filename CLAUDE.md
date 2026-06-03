@@ -57,11 +57,12 @@ The shooting mechanism's playability depends as much on feedback as on the gestu
 3. **Audio on every fire.** Synthesised chiptune click/shot — silent shots feel broken.
 4. **Calibration-as-tutorial.** First-run flow (hand path only): (a) show your hand (indicator going green confirms it), (b) trace the four screen corners with the index finger to calibrate, (c) 3 practice pinches against test targets with full feedback. Only then does the game start. A recalibrate action is accessible from the title screen (`[C]`).
 
-## Game rules (single-duck MVP)
-- 10 ducks per round. 3 shots per duck. Per-duck escape timer (flies off the top = miss).
-- Rising pass threshold per round; per-duck score scales with round number. Round 1 is an eased onboarding pace (`ROUND.SPEED_FACTOR_BASE`).
-- Dog: sniff-walk intro, retrieve on hit, laugh on miss.
-- Double-duck and clay-pigeon modes are **STRETCH**. Do not build them in v1.
+## Game rules (config-driven)
+- One target at a time. 3 shots per target. Per-target escape timer (flies off the top = miss).
+- **Levels (LEVELS.md).** Game logic reads only from the active `LevelConfig` (`src/levels/`) — `targetsPerRound`, `passThreshold`, the weighted `spawnTable` (species + speed + path style + scale + score), backdrop, and atmosphere (wind / visibility / silhouette). Never hard-code these. The 6-level progression Meadow→Marsh→Forest→Mountain→Twilight→Night loops endlessly at a rising pace (`RoundManager.speedMultiplier`, `LEVEL.CYCLE_SPEED_STEP`).
+- **[V2-NOTE]** LEVELS.md specifies PNG backdrops + per-species sheets. We draw backdrops **procedurally** (`BackdropSpec`, Graphics from the locked palette) and, until real species art lands, render new species as the **duck sprite tinted/scaled** (`SPECIES_ART`). Contract shape + the config-driven rule are preserved.
+- Dog: sniff-walk intro, retrieve on hit (with the bagged target shown at its mouth), laugh on miss.
+- Double-target and clay-pigeon modes are **STRETCH**.
 
 ## Asset contract (sprites are produced separately — match this exactly)
 - Hero **character** size: ~48 px visible figure.
@@ -86,9 +87,11 @@ src/
   scenes/    Boot.ts, Game.ts, UI.ts
   input/     InputSource.ts, MouseInputSource.ts, KeyboardInputSource.ts, HandInputSource.ts,
              oneEuro.ts, calibration.ts, pinchDetector.ts
-  game/      duck.ts, dog.ts, round.ts, score.ts, highscore.ts
+  game/      target.ts, dog.ts, round.ts, score.ts, highscore.ts
+  levels/    LevelConfig.ts, meadow.ts, marsh.ts, forest.ts, mountain.ts,
+             twilight.ts, night.ts, index.ts   # per-level config (LEVELS.md)
   ui/        crosshair.ts, trackingIndicator.ts
-  config/    tuning.ts   # all gesture + difficulty constants live here, for fast tweaking in Cursor
+  config/    tuning.ts   # all gesture + difficulty + cross-level constants
   audio/     sfx.ts
 assets/
   sprites/   audio/
