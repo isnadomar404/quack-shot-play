@@ -7,6 +7,7 @@ import duckHitUrl from "../../assets/sprites/duck_hit.png";
 import dogSniffUrl from "../../assets/sprites/dog_sniff.png";
 import dogLaughUrl from "../../assets/sprites/dog_laugh.png";
 import dogRetrieveUrl from "../../assets/sprites/dog_retrieve.png";
+import manUrl from "../../assets/sprites/man.png";
 
 /**
  * BootScene — preloads the sprite sheets (68x68 frames per the CLAUDE.md asset
@@ -29,6 +30,8 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet("dog_sniff", dogSniffUrl, frame);
     this.load.spritesheet("dog_laugh", dogLaughUrl, frame);
     this.load.spritesheet("dog_retrieve", dogRetrieveUrl, frame);
+    // Single 68x68 still image (the campfire interlude man — PixelLab).
+    this.load.image("man", manUrl);
   }
 
   create(): void {

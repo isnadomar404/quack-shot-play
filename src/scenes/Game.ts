@@ -544,9 +544,24 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(fireX - 13, fireBaseY - 2, 26, 4);
     g.fillRect(fireX - 9, fireBaseY - 5, 7, 6);
     g.fillRect(fireX + 4, fireBaseY - 5, 7, 6);
-    this.drawMan(g, 110, groundY + 22, fireX);
     this.drawBone(g, 198, fireBaseY - 1);
     this.interludeObjects.push(g);
+
+    // The camper (PixelLab sprite), standing by the fire, facing it.
+    const man = this.add
+      .image(120, groundY + 20, "man")
+      .setOrigin(0.5, 1)
+      .setScale(0.62)
+      .setDepth(76);
+    this.interludeObjects.push(man);
+
+    // A roasting stick from the camper out over the flames, with food on the end.
+    const skewer = this.add.graphics().setDepth(79);
+    skewer.lineStyle(2, 0x566c86, 1);
+    skewer.lineBetween(128, groundY + 2, fireX - 4, fireBaseY - 16);
+    skewer.fillStyle(0xb13e53, 1);
+    skewer.fillRect(fireX - 8, fireBaseY - 19, 5, 5);
+    this.interludeObjects.push(skewer);
 
     // The dog, head down beside the bone (sniff anim reads as licking/eating).
     const dog = this.add
@@ -627,27 +642,6 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0xffcd75, 1);
     g.fillRect(x + j(8), baseY - 24 + j(6), 1, 1);
     g.fillRect(x + j(8), baseY - 28 + j(6), 1, 1);
-  }
-
-  /** A simple seated pixel man grilling a skewer over the fire at fireX. */
-  private drawMan(
-    g: Phaser.GameObjects.Graphics,
-    mx: number,
-    baseY: number,
-    fireX: number,
-  ): void {
-    g.fillStyle(0x29366f, 1); // legs (sitting, extended toward the fire)
-    g.fillRect(mx - 3, baseY - 4, 18, 4);
-    g.fillStyle(0xb13e53, 1); // torso / shirt
-    g.fillRect(mx - 4, baseY - 16, 9, 13);
-    g.fillStyle(0xffcd75, 1); // arm + skewer reaching toward the fire
-    g.fillRect(mx + 4, baseY - 14, fireX - mx - 8, 2);
-    g.fillStyle(0x566c86, 1); // food on the skewer, over the flames
-    g.fillRect(fireX - 8, baseY - 15, 4, 4);
-    g.fillStyle(0xffcd75, 1); // head
-    g.fillCircle(mx, baseY - 19, 4);
-    g.fillStyle(0x333c57, 1); // cap / hair
-    g.fillRect(mx - 4, baseY - 23, 9, 3);
   }
 
   /** A small white bone for the dog. */
