@@ -111,9 +111,11 @@ export const SCORE = {
   PER_HIT_BASE: 100,
 } as const;
 
-/** Audio. Chiptune SFX are synthesised at runtime (Web Audio) — no files. */
+/** Audio. Chiptune SFX + music are synthesised at runtime (Web Audio) — no files. */
 export const AUDIO = {
   MASTER_VOLUME: 0.25,
+  /** Seconds per "beat" unit in the music melodies (see audio/sfx.ts). */
+  MUSIC_STEP: 0.14,
 } as const;
 
 /** Juice (PLAN.md "the juice the original couldn't do"). */

@@ -178,6 +178,7 @@ export class GameScene extends Phaser.Scene {
       this.clearCalib();
       this.clearScene();
       this.settingsMenu.close();
+      sfx.stopMusic();
       if (this.audioUnlock) {
         window.removeEventListener("pointerdown", this.audioUnlock);
         window.removeEventListener("keydown", this.audioUnlock);
@@ -231,6 +232,8 @@ export class GameScene extends Phaser.Scene {
   /** Round opens with the dog's sniff-walk; first target spawns when it dives in. */
   private startRound(): void {
     this.mode = "intro";
+    sfx.stopMusic(); // leave the front-end music behind for gameplay
+    sfx.dogIntro(); // playful cue as the dog trots on
     this.emitHud();
     this.dog.playIntro(() => this.beginNextTarget());
   }
@@ -504,7 +507,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.round.passed) {
       this.mode = "transition";
-      sfx.roundClear();
+      sfx.levelClear();
       const clearedName = this.round.levelName;
       this.showBanner(
         `${clearedName.toUpperCase()} CLEAR`,
@@ -530,7 +533,7 @@ export class GameScene extends Phaser.Scene {
     const beaten = this.score.total > this.hiScore;
     this.hiScore = saveHiScore(this.score.total);
     const hiTag = beaten ? `NEW HI ${this.hiScore}!` : `HI ${this.hiScore}`;
-    sfx.dogLaugh();
+    sfx.gameOverTune();
     this.showBanner(
       "GAME OVER",
       `missed ${bagged}/${threshold} · ${hiTag} · fire to retry`,
@@ -820,6 +823,7 @@ export class GameScene extends Phaser.Scene {
    *  generic banner. Motion is suppressed under prefers-reduced-motion. */
   private showTitle(): void {
     this.clearTitle();
+    sfx.titleMusic(); // front-end loop (plays once audio is unlocked)
     const cx = DISPLAY.WIDTH / 2;
 
     for (let i = 0; i < TITLE_FX.AMBIENT_DUCKS; i++) this.spawnAmbientDuck(i);
