@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { CRT, DISPLAY, TYPO } from "../config/tuning";
+import { sfx } from "../audio/sfx";
 import { HUD_EVENT, type HudState } from "./Game";
 
 /**
@@ -12,6 +13,7 @@ export class UIScene extends Phaser.Scene {
   private shotsText!: Phaser.GameObjects.Text;
   private roundText!: Phaser.GameObjects.Text;
   private bagText!: Phaser.GameObjects.Text;
+  private muteText!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "UI" });
@@ -56,11 +58,34 @@ export class UIScene extends Phaser.Scene {
       this.bagText.setText(this.buildBagRow(state));
     };
     this.game.events.on(HUD_EVENT, onHud);
+
+    // Mute toggle + corner hint (bottom-left). [M] flips it; persisted in sfx.
+    this.muteText = this.add
+      .text(6, DISPLAY.HEIGHT - 11, "", {
+        fontFamily: TYPO.BODY,
+        fontSize: "8px",
+        color: "#94b0c2",
+      })
+      .setOrigin(0, 0)
+      .setDepth(10);
+    this.refreshMute();
+    this.input.keyboard?.on("keydown-M", () => {
+      sfx.toggleMute();
+      this.refreshMute();
+    });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.game.events.off(HUD_EVENT, onHud);
     });
 
     this.drawScanlines();
+  }
+
+  /** Update the mute hint to reflect the current state. */
+  private refreshMute(): void {
+    const muted = sfx.isMuted();
+    this.muteText.setText(muted ? "[M] MUTED" : "[M] MUTE");
+    this.muteText.setColor(muted ? "#b13e53" : "#94b0c2"); // red when muted
   }
 
   /** Optional subtle CRT scanline overlay drawn above everything. */

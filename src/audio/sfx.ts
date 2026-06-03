@@ -74,9 +74,19 @@ const GAME_OVER: readonly Note[] = [
   ["C5", 2], ["G4", 2], ["Ab4", 2], ["G4", 5],
 ];
 
+const MUTE_KEY = "fowlplay:muted";
+function loadMuted(): boolean {
+  try {
+    return localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
 class Sfx {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private muted: boolean = loadMuted();
   private musicOn = false;
   private musicTimer: number | null = null;
 
@@ -95,8 +105,30 @@ class Sfx {
     if (!Ctor) return;
     this.ctx = new Ctor();
     this.master = this.ctx.createGain();
-    this.master.gain.value = AUDIO.MASTER_VOLUME;
+    this.master.gain.value = this.muted ? 0 : AUDIO.MASTER_VOLUME;
     this.master.connect(this.ctx.destination);
+  }
+
+  /** Mute / unmute all sound (master gain to 0). Persisted across reloads. */
+  isMuted(): boolean {
+    return this.muted;
+  }
+
+  setMuted(m: boolean): void {
+    this.muted = m;
+    this.ensure();
+    if (this.master) this.master.gain.value = m ? 0 : AUDIO.MASTER_VOLUME;
+    try {
+      localStorage.setItem(MUTE_KEY, m ? "1" : "0");
+    } catch {
+      // Storage unavailable — keep the in-memory mute state.
+    }
+  }
+
+  /** Flip the mute state; returns the new value. */
+  toggleMute(): boolean {
+    this.setMuted(!this.muted);
+    return this.muted;
   }
 
   private tone(opts: ToneOpts): void {
