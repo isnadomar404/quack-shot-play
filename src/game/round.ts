@@ -59,6 +59,18 @@ export class RoundManager {
     return this.baggedCount >= this.passThreshold;
   }
 
+  /** Targets still to be presented this level. */
+  get remaining(): number {
+    return Math.max(0, this.targetsPerRound - this.hits.length);
+  }
+
+  /** True while the pass threshold is still mathematically reachable — i.e.
+   *  even bagging every remaining target could meet it. Once false, the level
+   *  is lost (fail-fast game over). */
+  get canStillPass(): boolean {
+    return this.baggedCount + this.remaining >= this.passThreshold;
+  }
+
   /** True when the just-cleared level was the last in the progression. */
   get isFinalLevel(): boolean {
     return this.levelIndex === LEVELS.length - 1;

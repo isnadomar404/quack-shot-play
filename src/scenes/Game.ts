@@ -463,7 +463,10 @@ export class GameScene extends Phaser.Scene {
     // Dog reacts before the loop continues — retrieve on hit, mockery on miss.
     this.mode = "reaction";
     const next = (): void => {
-      if (this.round.isRoundComplete) this.endRound();
+      // Fail-fast: end the run the moment the milestone can't be reached, even
+      // before all targets are presented.
+      if (!this.round.canStillPass) this.triggerGameOver();
+      else if (this.round.isRoundComplete) this.endRound();
       else this.beginNextTarget();
     };
     if (hit) {
@@ -493,12 +496,24 @@ export class GameScene extends Phaser.Scene {
         this.startRound();
       });
     } else {
-      this.mode = "gameover";
-      const beaten = this.score.total > this.hiScore;
-      this.hiScore = saveHiScore(this.score.total);
-      const tag = beaten ? `NEW HI ${this.hiScore}!` : `HI ${this.hiScore}`;
-      this.showBanner("GAME OVER", `${tag} — fire to retry`);
+      this.triggerGameOver();
     }
+  }
+
+  /** End the run — the player missed the level's pass threshold (milestone).
+   *  Saves the hi-score and shows the missed milestone + retry prompt. */
+  private triggerGameOver(): void {
+    this.mode = "gameover";
+    const bagged = this.round.baggedCount;
+    const threshold = this.round.passThreshold;
+    const beaten = this.score.total > this.hiScore;
+    this.hiScore = saveHiScore(this.score.total);
+    const hiTag = beaten ? `NEW HI ${this.hiScore}!` : `HI ${this.hiScore}`;
+    sfx.dogLaugh();
+    this.showBanner(
+      "GAME OVER",
+      `missed ${bagged}/${threshold} · ${hiTag} · fire to retry`,
+    );
   }
 
   /** Title subtitle: include the stored hi-score once one exists. */
